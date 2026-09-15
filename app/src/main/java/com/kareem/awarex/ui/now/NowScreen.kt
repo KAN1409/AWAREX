@@ -27,11 +27,16 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.app.NotificationManagerCompat
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kareem.awarex.core.model.AttentionCard
@@ -43,6 +48,18 @@ import java.time.format.DateTimeFormatter
 @Composable
 fun NowScreen(viewModel: NowViewModel = viewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    var notificationAccessEnabled by remember {
+        mutableStateOf(NotificationManagerCompat.getEnabledListenerPackages(context).contains(context.packageName))
+    }
+
+    LifecycleResumeEffect(viewModel) {
+        notificationAccessEnabled = NotificationManagerCompat
+            .getEnabledListenerPackages(context)
+            .contains(context.packageName)
+        viewModel.refresh()
+        onPauseOrDispose { }
+    }
 
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         LazyColumn(
@@ -79,7 +96,7 @@ fun NowScreen(viewModel: NowViewModel = viewModel()) {
                 }
             }
 
-            item { NotificationAwarenessCard() }
+            item { NotificationAwarenessCard(enabled = notificationAccessEnabled) }
 
             item {
                 CaptureCard(
@@ -119,7 +136,7 @@ fun NowScreen(viewModel: NowViewModel = viewModel()) {
 }
 
 @Composable
-private fun NotificationAwarenessCard() {
+private fun NotificationAwarenessCard(enabled: Boolean) {
     val context = LocalContext.current
     Card(
         shape = RoundedCornerShape(24.dp),
@@ -127,25 +144,30 @@ private fun NotificationAwarenessCard() {
     ) {
         Column(modifier = Modifier.padding(18.dp)) {
             Text(
-                text = "PASSIVE AWARENESS",
+                text = if (enabled) "PASSIVE AWARENESS · ACTIVE" else "PASSIVE AWARENESS",
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.Bold
             )
             Spacer(Modifier.height(8.dp))
             Text(
-                text = "Let AWAREX observe notification text as evidence, even when the app is closed. Android keeps this permission under Notification access.",
+                text = if (enabled) {
+                    "AWAREX can now observe notification text as evidence while the app is closed. New evidence appears here when you return."
+                } else {
+                    "Let AWAREX observe notification text as evidence, even when the app is closed. Android keeps this permission under Notification access."
+                },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(Modifier.height(12.dp))
             OutlinedButton(
-                onClick = {
-                    context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
-                },
+                onClick = { context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Open notification access", fontWeight = FontWeight.SemiBold)
+                Text(
+                    if (enabled) "Notification access settings" else "Enable notification awareness",
+                    fontWeight = FontWeight.SemiBold
+                )
             }
         }
     }
