@@ -43,6 +43,19 @@ class AwareRepository(
         )
     }
 
+    fun captureIfNew(
+        text: String,
+        source: String,
+        dedupeWindowMillis: Long = 15_000L
+    ): CaptureResult? {
+        val clean = text.trim()
+        if (clean.isEmpty()) return null
+        val timestamp = now()
+        val since = (timestamp - dedupeWindowMillis.coerceAtLeast(0L)).coerceAtLeast(0L)
+        if (store.hasRecentObservation(clean, source, since)) return null
+        return capture(clean, source)
+    }
+
     fun attentionCards(): List<AttentionCard> {
         val timestamp = now()
         return store.activeOpenLoops().mapNotNull { loop ->
