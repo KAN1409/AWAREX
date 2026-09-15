@@ -12,7 +12,7 @@ object NotificationEvidenceExtractor {
         val title = payload.title.clean()
         val bigText = payload.bigText.clean()
         val normalText = payload.text.clean()
-        val lines = payload.lines.map(String::clean).filter(String::isNotEmpty).joinToString(" · ")
+        val lines = payload.lines.map { it.clean() }.filter { it.isNotEmpty() }.joinToString(" · ")
 
         val body = sequenceOf(bigText, normalText, lines).firstOrNull { it.isNotEmpty() }.orEmpty()
         if (body.isEmpty() && title.isEmpty()) return null
