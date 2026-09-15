@@ -4,7 +4,6 @@ import com.kareem.awarex.core.model.OpenLoop
 import java.time.Instant
 import java.time.ZoneId
 import java.time.ZonedDateTime
-import java.time.temporal.ChronoUnit
 import java.util.Locale
 
 class CommitmentEngine(
@@ -21,7 +20,7 @@ class CommitmentEngine(
         if (!looksLikeCommitment(normalized)) return null
 
         val dueAt = when {
-            containsAny(normalized, "tomorrow", "بكرة", "بكره") -> nextDayStart(observedAt)
+            containsAny(normalized, "tomorrow", "بكرة", "بكره") -> endOfNextDay(observedAt)
             containsAny(normalized, "today", "النهاردة", "النهارده", "اليوم") -> endOfDay(observedAt)
             else -> null
         }
@@ -98,9 +97,9 @@ class CommitmentEngine(
         return if (clean.length <= 72) clean else "Waiting for ${subject.take(52)}"
     }
 
-    private fun nextDayStart(observedAt: Long): Long {
+    private fun endOfNextDay(observedAt: Long): Long {
         val base = ZonedDateTime.ofInstant(Instant.ofEpochMilli(observedAt), zoneId)
-        return base.plusDays(1).truncatedTo(ChronoUnit.DAYS).toInstant().toEpochMilli()
+        return base.toLocalDate().plusDays(2).atStartOfDay(zoneId).minusNanos(1).toInstant().toEpochMilli()
     }
 
     private fun endOfDay(observedAt: Long): Long {
@@ -119,13 +118,12 @@ class CommitmentEngine(
         .trim()
 
     private fun meaningfulTokens(value: String): List<String> {
-        val stopWords = STOP_WORDS
         return normalize(value)
             .split(' ')
             .asSequence()
-            .map { it.trim(''') }
+            .map { it.replace("'", "") }
             .filter { it.length >= 3 }
-            .filterNot { it in stopWords }
+            .filterNot { it in STOP_WORDS }
             .distinct()
             .toList()
     }
@@ -134,7 +132,7 @@ class CommitmentEngine(
 
     companion object {
         private val STOP_WORDS = setOf(
-            "the", "and", "that", "this", "with", "for", "you", "your", "will", "i'll", "we'll",
+            "the", "and", "that", "this", "with", "for", "you", "your", "will", "ill", "well",
             "tomorrow", "today", "send", "sent", "share", "shared", "review", "prepare", "done",
             "بكره", "بكرة", "النهاردة", "النهارده", "اليوم", "هبعت", "هابعت", "هنبعت", "هراجع",
             "هجهز", "هخلص", "هرد", "هعمل", "هبلغ", "بعت", "بعتلك", "تم", "خلصت", "جهزت"
