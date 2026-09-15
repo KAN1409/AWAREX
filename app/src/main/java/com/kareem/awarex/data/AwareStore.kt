@@ -61,6 +61,17 @@ class AwareStore(context: Context) : SQLiteOpenHelper(
         return Observation(id = id, text = clean, source = source, observedAt = observedAt)
     }
 
+    fun hasRecentObservation(text: String, source: String, since: Long): Boolean {
+        val clean = text.trim()
+        if (clean.isEmpty()) return false
+        readableDatabase.rawQuery(
+            "SELECT 1 FROM observations WHERE text=? AND source=? AND observed_at>=? LIMIT 1",
+            arrayOf(clean, source, since.toString())
+        ).use { cursor ->
+            return cursor.moveToFirst()
+        }
+    }
+
     fun insertOpenLoop(
         title: String,
         normalizedSubject: String,
