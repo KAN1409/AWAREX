@@ -93,7 +93,7 @@ fun NowScreen(viewModel: NowViewModel = viewModel()) {
 
             if (state.attention.isNotEmpty()) {
                 item { SectionTitle("Needs attention") }
-                items(state.attention, key = { it.loopId }) { card ->
+                items(state.attention, key = { "attention:${it.loopId}" }) { card ->
                     AttentionCardView(card)
                 }
             }
@@ -104,7 +104,7 @@ fun NowScreen(viewModel: NowViewModel = viewModel()) {
                     EmptyEvidence()
                 }
             } else {
-                items(state.recentEvidence, key = { it.id }) { observation ->
+                items(state.recentEvidence, key = { "evidence:${it.id}" }) { observation ->
                     EvidenceRow(observation)
                 }
             }
