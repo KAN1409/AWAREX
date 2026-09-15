@@ -1,5 +1,7 @@
 package com.kareem.awarex.ui.now
 
+import android.content.Intent
+import android.provider.Settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,6 +21,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -26,6 +29,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -75,6 +79,8 @@ fun NowScreen(viewModel: NowViewModel = viewModel()) {
                 }
             }
 
+            item { NotificationAwarenessCard() }
+
             item {
                 CaptureCard(
                     input = state.input,
@@ -100,9 +106,7 @@ fun NowScreen(viewModel: NowViewModel = viewModel()) {
 
             item { SectionTitle("Evidence") }
             if (state.recentEvidence.isEmpty()) {
-                item {
-                    EmptyEvidence()
-                }
+                item { EmptyEvidence() }
             } else {
                 items(state.recentEvidence, key = { "evidence:${it.id}" }) { observation ->
                     EvidenceRow(observation)
@@ -110,6 +114,39 @@ fun NowScreen(viewModel: NowViewModel = viewModel()) {
             }
 
             item { Spacer(Modifier.height(26.dp)) }
+        }
+    }
+}
+
+@Composable
+private fun NotificationAwarenessCard() {
+    val context = LocalContext.current
+    Card(
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Column(modifier = Modifier.padding(18.dp)) {
+            Text(
+                text = "PASSIVE AWARENESS",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = "Let AWAREX observe notification text as evidence, even when the app is closed. Android keeps this permission under Notification access.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(12.dp))
+            OutlinedButton(
+                onClick = {
+                    context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Open notification access", fontWeight = FontWeight.SemiBold)
+            }
         }
     }
 }
