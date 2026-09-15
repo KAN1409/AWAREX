@@ -22,25 +22,16 @@ class AwareNotificationListenerService : NotificationListenerService() {
         if (notification.flags and Notification.FLAG_GROUP_SUMMARY != 0) return
 
         val extras = notification.extras
-        val title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString()?.trim().orEmpty()
-        val bigText = extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString()?.trim().orEmpty()
-        val normalText = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString()?.trim().orEmpty()
-        val lines = extras.getCharSequenceArray(Notification.EXTRA_TEXT_LINES)
-            ?.map { it.toString().trim() }
-            ?.filter { it.isNotEmpty() }
-            ?.joinToString(" · ")
-            .orEmpty()
-
-        val body = sequenceOf(bigText, normalText, lines).firstOrNull { it.isNotEmpty() }.orEmpty()
-        if (body.isEmpty() && title.isEmpty()) return
-
-        val evidence = when {
-            title.isNotEmpty() && body.isNotEmpty() && !body.startsWith(title, ignoreCase = true) -> "$title: $body"
-            body.isNotEmpty() -> body
-            else -> title
-        }.trim()
-
-        if (evidence.isEmpty()) return
+        val evidence = NotificationEvidenceExtractor.extract(
+            NotificationEvidenceExtractor.Payload(
+                title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty(),
+                bigText = extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString().orEmpty(),
+                text = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString().orEmpty(),
+                lines = extras.getCharSequenceArray(Notification.EXTRA_TEXT_LINES)
+                    ?.map(CharSequence::toString)
+                    .orEmpty()
+            )
+        ) ?: return
 
         serviceScope.launch {
             val repository = AwareRepository(AwareStore(applicationContext))
