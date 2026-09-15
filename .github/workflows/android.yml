@@ -14,6 +14,10 @@ concurrency:
 env:
   ANDROID_HOME: /usr/local/lib/android/sdk
   ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+  AWAREX_KEYSTORE_B64: ${{ secrets.AWAREX_KEYSTORE_B64 }}
+  AWAREX_KEYSTORE_PASSWORD: ${{ secrets.AWAREX_KEYSTORE_PASSWORD }}
+  AWAREX_KEY_ALIAS: ${{ secrets.AWAREX_KEY_ALIAS }}
+  AWAREX_KEY_PASSWORD: ${{ secrets.AWAREX_KEY_PASSWORD }}
 
 jobs:
   verify:
@@ -52,9 +56,40 @@ jobs:
       - name: Build debug APK
         run: gradle --no-daemon assembleDebug
 
-      - name: Upload APK
+      - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
           name: AWAREX-debug
           path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+
+      - name: Materialize persistent signing key
+        if: ${{ env.AWAREX_KEYSTORE_B64 != '' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          printf '%s' "$AWAREX_KEYSTORE_B64" | base64 --decode > "$RUNNER_TEMP/awarex-release.jks"
+          test -s "$RUNNER_TEMP/awarex-release.jks"
+          echo "AWAREX_KEYSTORE_PATH=$RUNNER_TEMP/awarex-release.jks" >> "$GITHUB_ENV"
+
+      - name: Build persistent signed release APK
+        if: ${{ env.AWAREX_KEYSTORE_B64 != '' }}
+        run: gradle --no-daemon assembleRelease
+
+      - name: Verify persistent signed release APK
+        if: ${{ env.AWAREX_KEYSTORE_B64 != '' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="app/build/outputs/apk/release/app-release.apk"
+          test -s "$APK"
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$APK"
+
+      - name: Upload persistent signed release APK
+        if: ${{ env.AWAREX_KEYSTORE_B64 != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: AWAREX-signed-release
+          path: app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
