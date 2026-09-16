@@ -115,6 +115,14 @@ class AwareStore(context: Context) : SQLiteOpenHelper(
         return out
     }
 
+    fun deleteOpenLoop(loopId: Long): Boolean {
+        return writableDatabase.delete(
+            "open_loops",
+            "id=? AND resolved_at IS NULL",
+            arrayOf(loopId.toString())
+        ) == 1
+    }
+
     fun observation(id: Long): Observation? {
         readableDatabase.rawQuery(
             "SELECT id,text,source,observed_at FROM observations WHERE id=?",
