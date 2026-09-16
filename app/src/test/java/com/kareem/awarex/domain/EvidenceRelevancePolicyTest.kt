@@ -46,6 +46,46 @@ class EvidenceRelevancePolicyTest {
     }
 
     @Test
+    fun snapchatUpdatingMessagesStatusIsRejected() {
+        assertFalse(
+            EvidenceRelevancePolicy.shouldPersist(
+                "Updating messages...",
+                "notification:com.snapchat.android"
+            )
+        )
+    }
+
+    @Test
+    fun androidSystemNotificationSummaryIsRejected() {
+        assertFalse(
+            EvidenceRelevancePolicy.shouldPersist(
+                "2 more notifications",
+                "notification:com.android.systemui"
+            )
+        )
+    }
+
+    @Test
+    fun weatherFeedIsRejectedFromEvidenceMemory() {
+        assertFalse(
+            EvidenceRelevancePolicy.shouldPersist(
+                "23° in New Cairo City: Clear · See full forecast.",
+                "notification:com.google.android.googlequicksearchbox"
+            )
+        )
+    }
+
+    @Test
+    fun ordinaryWhatsappMessageStillSurvivesTheNoiseGate() {
+        assertTrue(
+            EvidenceRelevancePolicy.shouldPersist(
+                "Ahmed: The revised quotation is attached",
+                "notification:com.whatsapp"
+            )
+        )
+    }
+
+    @Test
     fun manualEvidenceIsNeverFilteredAsOperationalNoise() {
         assertTrue(
             EvidenceRelevancePolicy.shouldPersist(
