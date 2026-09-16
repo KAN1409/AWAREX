@@ -12,12 +12,24 @@ fail() {
   exit 1
 }
 
-for cmd in gh keytool openssl base64; do
-  command -v "$cmd" >/dev/null 2>&1 || fail "missing command: $cmd"
-done
+install_termux_package_if_missing() {
+  local command_name="$1"
+  local package_name="$2"
+  if command -v "$command_name" >/dev/null 2>&1; then
+    return 0
+  fi
+  command -v pkg >/dev/null 2>&1 || fail "missing command: $command_name (and Termux pkg is unavailable)"
+  printf 'Installing missing prerequisite: %s\n' "$package_name"
+  pkg install -y "$package_name" >/dev/null
+  command -v "$command_name" >/dev/null 2>&1 || fail "could not install command: $command_name"
+}
+
+install_termux_package_if_missing gh gh
+install_termux_package_if_missing openssl openssl
+install_termux_package_if_missing keytool openjdk-17
+install_termux_package_if_missing base64 coreutils
 
 gh auth status >/dev/null 2>&1 || fail "GitHub CLI is not authenticated"
-
 gh repo view "$REPO" >/dev/null 2>&1 || fail "cannot access $REPO"
 
 umask 077
