@@ -3,15 +3,18 @@ package com.kareem.awarex.data
 import com.kareem.awarex.core.model.AttentionCard
 import com.kareem.awarex.core.model.Observation
 import com.kareem.awarex.core.model.OpenLoop
+import com.kareem.awarex.core.model.WorldSnapshot
 import com.kareem.awarex.domain.CommitmentEngine
 import com.kareem.awarex.domain.EvidenceEventMatcher
 import com.kareem.awarex.domain.EvidenceRelevancePolicy
+import com.kareem.awarex.domain.WorldModelEngine
 import kotlin.math.abs
 
 class AwareRepository(
     private val store: AwareStore,
     private val commitmentEngine: CommitmentEngine = CommitmentEngine(),
     private val evidenceEventMatcher: EvidenceEventMatcher = EvidenceEventMatcher(commitmentEngine),
+    private val worldModelEngine: WorldModelEngine = WorldModelEngine(),
     private val now: () -> Long = System::currentTimeMillis
 ) {
     data class CaptureResult(
@@ -103,10 +106,39 @@ class AwareRepository(
         }
     }
 
-    fun recentEvidence(limit: Int = 20): List<Observation> {
-        val safeLimit = limit.coerceIn(1, 50)
+    fun worldSnapshot(): WorldSnapshot {
+        collapseRecentDuplicateOpenLoops()
+        val loops = store.recentOpenLoops(WORLD_LOOP_LIMIT)
+        val canonical = canonicalEvidence(WORLD_EVIDENCE_LIMIT).toMutableList()
+        val knownIds = canonical.mapTo(mutableSetOf()) { it.id }
+        loops.asSequence()
+            .flatMap { loop -> sequenceOf(loop.createdFromObservationId, loop.resolutionObservationId) }
+            .filterNotNull()
+            .distinct()
+            .filterNot(knownIds::contains)
+            .mapNotNull(store::observation)
+            .filter { EvidenceRelevancePolicy.shouldSurface(it.text, it.source) }
+            .forEach {
+                canonical += it
+                knownIds += it.id
+            }
+
+        return worldModelEngine.build(
+            observations = canonical,
+            loops = loops,
+            now = now()
+        )
+    }
+
+    fun recentEvidence(limit: Int = 20): List<Observation> =
+        canonicalEvidence(limit.coerceIn(1, 50))
+
+    fun close() = store.close()
+
+    private fun canonicalEvidence(limit: Int): List<Observation> {
+        val safeLimit = limit.coerceIn(1, WORLD_EVIDENCE_LIMIT)
         val canonical = mutableListOf<Observation>()
-        store.recentObservations((safeLimit * 8).coerceAtMost(200))
+        store.recentObservations((safeLimit * 8).coerceAtMost(WORLD_EVIDENCE_LIMIT))
             .asSequence()
             .filter { EvidenceRelevancePolicy.shouldSurface(it.text, it.source) }
             .forEach { observation ->
@@ -123,8 +155,6 @@ class AwareRepository(
             }
         return canonical
     }
-
-    fun close() = store.close()
 
     private fun collapseRecentDuplicateOpenLoops() {
         val active = store.activeOpenLoops().sortedBy { it.createdAt }
@@ -144,5 +174,7 @@ class AwareRepository(
 
     companion object {
         private const val DUPLICATE_LOOP_WINDOW_MILLIS = 120_000L
+        private const val WORLD_EVIDENCE_LIMIT = 200
+        private const val WORLD_LOOP_LIMIT = 100
     }
 }
