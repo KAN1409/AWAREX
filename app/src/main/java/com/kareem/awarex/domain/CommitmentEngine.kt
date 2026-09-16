@@ -45,6 +45,15 @@ class CommitmentEngine(
             ?.first
     }
 
+    fun sameSubject(left: String, right: String): Boolean {
+        val leftTokens = meaningfulTokens(left).toSet()
+        val rightTokens = meaningfulTokens(right).toSet()
+        if (leftTokens.isEmpty() || rightTokens.isEmpty()) return false
+        val overlap = leftTokens.intersect(rightTokens).size.toDouble()
+        val containment = overlap / minOf(leftTokens.size, rightTokens.size).toDouble()
+        return containment >= 0.75
+    }
+
     private fun looksLikeCommitment(text: String): Boolean = containsAny(
         text,
         "i'll ",
