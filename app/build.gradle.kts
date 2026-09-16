@@ -22,8 +22,8 @@ android {
         applicationId = "com.kareem.awarex"
         minSdk = 28
         targetSdk = 36
-        versionCode = 9
-        versionName = "0.2.6"
+        versionCode = 10
+        versionName = "0.2.7"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
