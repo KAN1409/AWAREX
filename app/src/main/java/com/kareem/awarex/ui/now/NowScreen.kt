@@ -98,15 +98,6 @@ fun NowScreen(viewModel: NowViewModel = viewModel()) {
 
             item { NotificationAwarenessCard(enabled = notificationAccessEnabled) }
 
-            item {
-                CaptureCard(
-                    input = state.input,
-                    working = state.working,
-                    onInputChanged = viewModel::onInputChanged,
-                    onCapture = viewModel::capture
-                )
-            }
-
             state.message?.let { message ->
                 item { StatusCard(message = message, isError = false) }
             }
@@ -119,6 +110,15 @@ fun NowScreen(viewModel: NowViewModel = viewModel()) {
                 items(state.attention, key = { "attention:${it.loopId}" }) { card ->
                     AttentionCardView(card)
                 }
+            }
+
+            item {
+                CaptureCard(
+                    input = state.input,
+                    working = state.working,
+                    onInputChanged = viewModel::onInputChanged,
+                    onCapture = viewModel::capture
+                )
             }
 
             item { SectionTitle("Evidence") }
@@ -139,35 +139,50 @@ fun NowScreen(viewModel: NowViewModel = viewModel()) {
 private fun NotificationAwarenessCard(enabled: Boolean) {
     val context = LocalContext.current
     Card(
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(if (enabled) 18.dp else 24.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
-        Column(modifier = Modifier.padding(18.dp)) {
-            Text(
-                text = if (enabled) "PASSIVE AWARENESS · ACTIVE" else "PASSIVE AWARENESS",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = if (enabled) {
-                    "AWAREX can now observe notification text as evidence while the app is closed. New evidence appears here when you return."
-                } else {
-                    "Let AWAREX observe notification text as evidence, even when the app is closed. Android keeps this permission under Notification access."
-                },
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(Modifier.height(12.dp))
-            OutlinedButton(
-                onClick = { context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) },
-                modifier = Modifier.fillMaxWidth()
+        if (enabled) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    if (enabled) "Notification access settings" else "Enable notification awareness",
-                    fontWeight = FontWeight.SemiBold
+                    text = "PASSIVE AWARENESS · ACTIVE",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
                 )
+                OutlinedButton(
+                    onClick = { context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) }
+                ) {
+                    Text("Settings", fontWeight = FontWeight.SemiBold)
+                }
+            }
+        } else {
+            Column(modifier = Modifier.padding(18.dp)) {
+                Text(
+                    text = "PASSIVE AWARENESS",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = "Let AWAREX observe notification text as evidence, even when the app is closed. Android keeps this permission under Notification access.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(12.dp))
+                OutlinedButton(
+                    onClick = { context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Enable notification awareness", fontWeight = FontWeight.SemiBold)
+                }
             }
         }
     }
