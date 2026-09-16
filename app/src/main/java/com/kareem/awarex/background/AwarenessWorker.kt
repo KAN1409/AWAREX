@@ -1,6 +1,7 @@
 package com.kareem.awarex.background
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
@@ -61,16 +62,25 @@ class AwarenessWorker(
                 .setPriority(NotificationCompat.PRIORITY_DEFAULT)
                 .build()
 
-            NotificationManagerCompat.from(applicationContext).notify(
-                candidate.key.hashCode(),
-                notification
-            )
-            preferences.markNotified(candidate.key, now)
+            if (postNotification(candidate.key.hashCode(), notification)) {
+                preferences.markNotified(candidate.key, now)
+            }
             Result.success()
         } catch (_: Throwable) {
             Result.retry()
         } finally {
             repository.close()
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun postNotification(id: Int, notification: android.app.Notification): Boolean {
+        if (!canPostNotifications(applicationContext)) return false
+        return try {
+            NotificationManagerCompat.from(applicationContext).notify(id, notification)
+            true
+        } catch (_: SecurityException) {
+            false
         }
     }
 
