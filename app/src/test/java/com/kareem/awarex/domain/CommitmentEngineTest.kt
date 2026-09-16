@@ -2,6 +2,7 @@ package com.kareem.awarex.domain
 
 import com.kareem.awarex.core.model.OpenLoop
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -64,5 +65,20 @@ class CommitmentEngineTest {
             resolutionObservationId = null
         )
         assertNull(engine.matchingResolution("Done with the bathroom drawings", listOf(loop)))
+    }
+
+    @Test
+    fun notificationPrefixStillRepresentsSameCommitmentSubject() {
+        assertTrue(
+            engine.sameSubject(
+                "kareem abdel nasser ahmed revised quotation",
+                "ahmed revised quotation"
+            )
+        )
+    }
+
+    @Test
+    fun unrelatedCommitmentsAreNotCollapsed() {
+        assertFalse(engine.sameSubject("revised quotation", "bathroom drawings"))
     }
 }
