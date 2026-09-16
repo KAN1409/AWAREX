@@ -72,15 +72,18 @@ class AwareRepository(
         val since = (timestamp - dedupeWindowMillis.coerceAtLeast(0L)).coerceAtLeast(0L)
         if (store.hasRecentObservation(clean, source, since)) return null
 
-        val candidate = commitmentEngine.extract(clean, timestamp)
-        if (candidate != null) {
-            val semanticSince = (timestamp - EvidenceEventMatcher.EVENT_WINDOW_MILLIS).coerceAtLeast(0L)
-            val recentEquivalentLoop = store.activeOpenLoops().any { loop ->
-                loop.createdAt >= semanticSince &&
-                    commitmentEngine.sameSubject(candidate.normalizedSubject, loop.normalizedSubject)
-            }
-            if (recentEquivalentLoop) return null
+        val semanticSince = (timestamp - EvidenceEventMatcher.EVENT_WINDOW_MILLIS).coerceAtLeast(0L)
+        val sameRecentEvent = store.recentObservations(30).any { previous ->
+            previous.observedAt >= semanticSince &&
+                EvidenceRelevancePolicy.shouldSurface(previous.text, previous.source) &&
+                evidenceEventMatcher.sameEvent(
+                    clean,
+                    timestamp,
+                    previous.text,
+                    previous.observedAt
+                )
         }
+        if (sameRecentEvent) return null
 
         return capture(clean, source)
     }
