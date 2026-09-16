@@ -143,10 +143,11 @@ class WorldModelEngine {
                     primaryEntity = createdEvidence?.let { extractEntity(it.text) }
                 )
 
+                val resolvedAt = loop.resolvedAt
                 if (
                     loop.isResolved &&
-                    loop.resolvedAt != null &&
-                    now - loop.resolvedAt in 0..COMPLETION_INSIGHT_WINDOW_MILLIS &&
+                    resolvedAt != null &&
+                    now - resolvedAt in 0..COMPLETION_INSIGHT_WINDOW_MILLIS &&
                     createdEvidence != null &&
                     resolutionEvidence != null
                 ) {
@@ -159,7 +160,7 @@ class WorldModelEngine {
                         evidenceTexts = listOf(createdEvidence.text, resolutionEvidence.text),
                         confidence = 0.91,
                         priority = 60,
-                        createdAt = loop.resolvedAt
+                        createdAt = resolvedAt
                     )
                 }
             }
@@ -177,18 +178,22 @@ class WorldModelEngine {
     }
 
     private fun extractPriceFact(observation: Observation): PriceFact? {
-        val match = AMOUNT_THEN_CURRENCY.find(observation.text)
-            ?: CURRENCY_THEN_AMOUNT.find(observation.text)
-            ?: return null
+        val amountFirst = AMOUNT_THEN_CURRENCY.find(observation.text)
+        val currencyFirst = if (amountFirst == null) CURRENCY_THEN_AMOUNT.find(observation.text) else null
         val amountText: String
         val currencyText: String
-        if (match.pattern == AMOUNT_THEN_CURRENCY.pattern) {
-            amountText = match.groupValues[1]
-            currencyText = match.groupValues[2]
-        } else {
-            currencyText = match.groupValues[1]
-            amountText = match.groupValues[2]
+        when {
+            amountFirst != null -> {
+                amountText = amountFirst.groupValues[1]
+                currencyText = amountFirst.groupValues[2]
+            }
+            currencyFirst != null -> {
+                currencyText = currencyFirst.groupValues[1]
+                amountText = currencyFirst.groupValues[2]
+            }
+            else -> return null
         }
+
         val amount = amountText.replace(",", "").replace(" ", "").toDoubleOrNull() ?: return null
         if (amount <= 0.0) return null
         val entity = extractEntity(observation.text)
