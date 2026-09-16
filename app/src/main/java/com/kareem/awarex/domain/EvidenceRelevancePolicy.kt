@@ -48,9 +48,10 @@ object EvidenceRelevancePolicy {
     }
 
     private fun containsDurableSignal(text: String): Boolean {
-        return DURABLE_SIGNAL_PHRASES.any(text::contains) ||
-            DURABLE_TIME_SIGNAL.containsMatchIn(text) ||
-            ARABIC_DURABLE_SIGNAL.containsMatchIn(text)
+        if (DURABLE_SIGNAL_PHRASES.any(text::contains)) return true
+        if (ACTION_WITH_TIME_SIGNAL.containsMatchIn(text)) return true
+        if (ARABIC_DURABLE_SIGNAL.containsMatchIn(text)) return true
+        return false
     }
 
     private fun normalize(value: String): String = value
@@ -137,8 +138,11 @@ object EvidenceRelevancePolicy {
         "revised quote",
         "quotation",
         "purchase order",
-        "approval",
-        "approved",
+        "approval required",
+        "approval pending",
+        "has been approved",
+        "was approved",
+        "quotation approved",
         "invoice",
         "deadline",
         "due date",
@@ -176,9 +180,9 @@ object EvidenceRelevancePolicy {
         RegexOption.IGNORE_CASE
     )
 
-    private val DURABLE_TIME_SIGNAL = Regex(
-        """\b(?:today|tomorrow|tonight|this morning|this afternoon|this evening|by\s+\d{1,2}(?::\d{2})?\s*(?:am|pm)?)\b""",
-        RegexOption.IGNORE_CASE
+    private val ACTION_WITH_TIME_SIGNAL = Regex(
+        """\b(?:send|deliver|submit|return|meet|meeting|appointment|deadline|due|pay|payment|collect|receive|pick\s*up|drop\s*off)\b.{0,80}\b(?:today|tomorrow|tonight|this morning|this afternoon|this evening|by\s+\d{1,2}(?::\d{2})?\s*(?:am|pm)?)\b""",
+        setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
     )
 
     private val ARABIC_DURABLE_SIGNAL = Regex(
