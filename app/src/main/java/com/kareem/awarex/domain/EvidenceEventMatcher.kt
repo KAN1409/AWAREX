@@ -21,6 +21,12 @@ class EvidenceEventMatcher(
         val right = rightText.trim().replace(Regex("\\s+"), " ")
         if (left.equals(right, ignoreCase = true)) return true
 
+        val leftNumbers = significantNumbers(left)
+        val rightNumbers = significantNumbers(right)
+        if (leftNumbers.isNotEmpty() && rightNumbers.isNotEmpty() && leftNumbers != rightNumbers) {
+            return false
+        }
+
         val leftCommitment = commitmentEngine.extract(left, leftObservedAt) ?: return false
         val rightCommitment = commitmentEngine.extract(right, rightObservedAt) ?: return false
         return commitmentEngine.sameSubject(
@@ -29,7 +35,14 @@ class EvidenceEventMatcher(
         )
     }
 
+    private fun significantNumbers(text: String): Set<String> = NUMBER
+        .findAll(text)
+        .map { it.value.replace(",", "") }
+        .filter { it.length >= 3 }
+        .toSet()
+
     companion object {
         const val EVENT_WINDOW_MILLIS = 10 * 60 * 1000L
+        private val NUMBER = Regex("""\d[\d,]*(?:\.\d+)?""")
     }
 }
