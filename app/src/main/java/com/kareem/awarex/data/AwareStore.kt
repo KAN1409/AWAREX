@@ -115,6 +115,23 @@ class AwareStore(context: Context) : SQLiteOpenHelper(
         return out
     }
 
+    fun recentOpenLoops(limit: Int = 50): List<OpenLoop> {
+        val safeLimit = limit.coerceIn(1, 100)
+        val out = mutableListOf<OpenLoop>()
+        readableDatabase.rawQuery(
+            """
+            SELECT id,title,normalized_subject,created_from_observation_id,due_at,created_at,resolved_at,resolution_observation_id
+            FROM open_loops
+            ORDER BY COALESCE(resolved_at,created_at) DESC,id DESC
+            LIMIT $safeLimit
+            """.trimIndent(),
+            null
+        ).use { cursor ->
+            while (cursor.moveToNext()) out += cursor.toOpenLoop()
+        }
+        return out
+    }
+
     fun deleteOpenLoop(loopId: Long): Boolean {
         return writableDatabase.delete(
             "open_loops",
