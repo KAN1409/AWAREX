@@ -58,4 +58,17 @@ class EvidenceEventMatcherTest {
             )
         )
     }
+
+    @Test
+    fun differentQuotedValuesAreNeverCollapsedAsTheSameEvent() {
+        val base = 1_800_000_000_000L
+        assertFalse(
+            matcher.sameEvent(
+                "Ahmed: I'll send Negma marble quotation 420000 EGP tomorrow",
+                base,
+                "Ahmed: I'll send Negma marble quotation 447000 EGP tomorrow",
+                base + 30_000
+            )
+        )
+    }
 }
