@@ -4,6 +4,7 @@ import com.kareem.awarex.core.model.AttentionCard
 import com.kareem.awarex.core.model.Observation
 import com.kareem.awarex.core.model.OpenLoop
 import com.kareem.awarex.domain.CommitmentEngine
+import com.kareem.awarex.domain.EvidenceRelevancePolicy
 import kotlin.math.abs
 
 class AwareRepository(
@@ -60,7 +61,8 @@ class AwareRepository(
         dedupeWindowMillis: Long = 15_000L
     ): CaptureResult? {
         val clean = text.trim()
-        if (clean.isEmpty()) return null
+        if (!EvidenceRelevancePolicy.shouldPersist(clean, source)) return null
+
         val timestamp = now()
         val since = (timestamp - dedupeWindowMillis.coerceAtLeast(0L)).coerceAtLeast(0L)
         if (store.hasRecentObservation(clean, source, since)) return null
@@ -98,7 +100,14 @@ class AwareRepository(
         }
     }
 
-    fun recentEvidence(limit: Int = 20): List<Observation> = store.recentObservations(limit)
+    fun recentEvidence(limit: Int = 20): List<Observation> {
+        val safeLimit = limit.coerceIn(1, 50)
+        return store.recentObservations((safeLimit * 5).coerceAtMost(200))
+            .asSequence()
+            .filter { EvidenceRelevancePolicy.shouldSurface(it.text, it.source) }
+            .take(safeLimit)
+            .toList()
+    }
 
     fun close() = store.close()
 
