@@ -2,7 +2,7 @@ name: Android CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, 'release/1.0.0-full-app' ]
   pull_request:
     branches: [ main ]
   workflow_dispatch:
@@ -59,7 +59,7 @@ jobs:
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: AWAREX-debug
+          name: AWAREX-1.0.0-debug
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
 
@@ -90,6 +90,6 @@ jobs:
         if: ${{ env.AWAREX_KEYSTORE_B64 != '' }}
         uses: actions/upload-artifact@v4
         with:
-          name: AWAREX-signed-release
+          name: AWAREX-1.0.0-signed-release
           path: app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
