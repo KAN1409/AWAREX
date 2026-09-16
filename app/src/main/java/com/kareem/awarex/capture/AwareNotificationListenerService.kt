@@ -24,6 +24,7 @@ class AwareNotificationListenerService : NotificationListenerService() {
 
         val notification = posted.notification ?: return
         if (notification.flags and Notification.FLAG_GROUP_SUMMARY != 0) return
+        if (isOperationalNoise(notification)) return
 
         val extras = notification.extras
         val payload = NotificationEvidenceExtractor.Payload(
@@ -55,6 +56,19 @@ class AwareNotificationListenerService : NotificationListenerService() {
         pendingCaptures[captureKey] = job
     }
 
+    private fun isOperationalNoise(notification: Notification): Boolean {
+        val category = notification.category
+        if (category in NOISE_CATEGORIES) return true
+
+        val extras = notification.extras
+        val progressMax = extras.getInt(Notification.EXTRA_PROGRESS_MAX, 0)
+        if (progressMax > 0) return true
+
+        return notification.flags and Notification.FLAG_ONGOING_EVENT != 0 &&
+            category != Notification.CATEGORY_MESSAGE &&
+            category != Notification.CATEGORY_EMAIL
+    }
+
     override fun onDestroy() {
         pendingCaptures.values.forEach(Job::cancel)
         pendingCaptures.clear()
@@ -65,5 +79,13 @@ class AwareNotificationListenerService : NotificationListenerService() {
     companion object {
         private const val COALESCE_DELAY_MILLIS = 900L
         private const val NOTIFICATION_DEDUPE_WINDOW_MILLIS = 60_000L
+
+        private val NOISE_CATEGORIES = setOf(
+            Notification.CATEGORY_PROGRESS,
+            Notification.CATEGORY_SERVICE,
+            Notification.CATEGORY_SYSTEM,
+            Notification.CATEGORY_STATUS,
+            Notification.CATEGORY_TRANSPORT
+        )
     }
 }
