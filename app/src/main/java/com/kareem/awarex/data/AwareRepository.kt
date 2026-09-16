@@ -4,12 +4,14 @@ import com.kareem.awarex.core.model.AttentionCard
 import com.kareem.awarex.core.model.Observation
 import com.kareem.awarex.core.model.OpenLoop
 import com.kareem.awarex.domain.CommitmentEngine
+import com.kareem.awarex.domain.EvidenceEventMatcher
 import com.kareem.awarex.domain.EvidenceRelevancePolicy
 import kotlin.math.abs
 
 class AwareRepository(
     private val store: AwareStore,
     private val commitmentEngine: CommitmentEngine = CommitmentEngine(),
+    private val evidenceEventMatcher: EvidenceEventMatcher = EvidenceEventMatcher(commitmentEngine),
     private val now: () -> Long = System::currentTimeMillis
 ) {
     data class CaptureResult(
@@ -69,8 +71,9 @@ class AwareRepository(
 
         val candidate = commitmentEngine.extract(clean, timestamp)
         if (candidate != null) {
+            val semanticSince = (timestamp - EvidenceEventMatcher.EVENT_WINDOW_MILLIS).coerceAtLeast(0L)
             val recentEquivalentLoop = store.activeOpenLoops().any { loop ->
-                loop.createdAt >= since &&
+                loop.createdAt >= semanticSince &&
                     commitmentEngine.sameSubject(candidate.normalizedSubject, loop.normalizedSubject)
             }
             if (recentEquivalentLoop) return null
@@ -102,11 +105,23 @@ class AwareRepository(
 
     fun recentEvidence(limit: Int = 20): List<Observation> {
         val safeLimit = limit.coerceIn(1, 50)
-        return store.recentObservations((safeLimit * 5).coerceAtMost(200))
+        val canonical = mutableListOf<Observation>()
+        store.recentObservations((safeLimit * 8).coerceAtMost(200))
             .asSequence()
             .filter { EvidenceRelevancePolicy.shouldSurface(it.text, it.source) }
-            .take(safeLimit)
-            .toList()
+            .forEach { observation ->
+                val duplicate = canonical.any { existing ->
+                    evidenceEventMatcher.sameEvent(
+                        observation.text,
+                        observation.observedAt,
+                        existing.text,
+                        existing.observedAt
+                    )
+                }
+                if (!duplicate) canonical += observation
+                if (canonical.size >= safeLimit) return canonical
+            }
+        return canonical
     }
 
     fun close() = store.close()
